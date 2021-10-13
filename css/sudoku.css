@@ -1,0 +1,106 @@
+#lhs {
+	float: left;
+}
+
+#rhs {
+	float: left;
+	margin-left: 50px;
+}
+
+#grid {
+}
+
+.clear-inner,.clear-outer, clear {
+clear: both;
+}
+
+.innerCell {
+border-style: solid;
+border-width: 1px;
+background: #ffffff;
+float: left;
+padding: 5px;
+width: 18px;
+height: 18px;
+text-align: center;
+}
+
+.outerCell {
+border-style: solid;
+border-width: 2px;
+float: left;
+padding: 2px;
+}
+
+
+ul#candidates {
+	margin: 0;
+}
+
+ul#candidates li {
+display: inline;
+padding: 5px;
+margin: 0px;
+}
+
+ul#candidates .candidate-value {
+font-family: tahoma;
+font-weight: bold;
+}
+
+.cell-selected {
+background-color: orange;
+}
+
+.candidate-hover {
+color: orange;
+cursor: pointer;
+}
+
+#theory-panel {
+	margin-left: 20px;
+}
+
+ul#theory {
+	margin: 0px;
+	padding: 0px;
+}
+
+ul#theory li{
+	margin: 0px;
+	padding: 0px;
+}
+
+h2#theory-header {
+	text-decoration: underline;
+}
+
+.cell-speculative {
+	color: white;
+	background-color: orange; 
+}
+
+.hidden {
+	visibility: hidden;
+}
+
+a.undo {
+	font-family: tahoma;
+	font-weight: italic;
+	margin-left: 10px;
+	color: blue;
+}
+
+#input-panel th {
+		text-align: left;
+}
+
+#diagnostics .error {
+	color: red;
+	font-weight: bold;
+}
+
+#diagnostics .finished {
+		color: blue:
+		font-weight: bold;
+}

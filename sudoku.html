@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Sudoku</title>
+    <link rel="stylesheet" type="text/css" href="./css/sudoku.css"></link>
+    <style type="text/css">
+        #controls ul li {
+            display: inline;
+            margin-left: 10px;
+        }
+        #controls button {
+            width: 150px;
+        }
+		#textio-panel-storing {
+			display: none;
+		}
+		#textio-panel-loading {
+			display: none;
+		}
+    </style>
+    <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="https://ajax.aspnetcdn.com/ajax/knockout/knockout-3.3.0.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+    <script src="./js/sudoku.js"></script>
+
+    <script type="text/javascript">
+        var puzzle_setup_state = [];
+        $(document).ready(
+            function() {
+                var myViewModel = {
+                    self: this,
+                    cellAssignments: ko.observableArray([]),
+                    solving_mode: ko.observable(false), // mode is either "solving" or "set up" (the latter is when we are creating the puzzle)
+                    theory_stack: ko.observableArray(),
+                    guessStatusValue: ko.observable("guess"),
+					loading_puzzle: ko.observable(false),
+					puzzleData: ko.observable(""),
+                    innerCellSelected: ko.observable(false), // denotes whether an inner cell has been selected
+                    setup_complete: function() {
+                        console.log("Store initial setup and change mode to solve");
+                        for (var i = 0; i < sudoku.grid_state.length; i++) {
+                            for (var j = 0; j < sudoku.grid_state[i].length; j++) {
+                                if (sudoku.grid_state[i][j] != null) {
+                                    puzzle_setup_state.push([i + 1, j + 1, sudoku.grid_state[i][j]]);
+                                }
+                            }
+                        }
+                        //console.log( 'Puzzle initial state: ' + JSON.stringify(puzzle_setup_state) );
+                        console.log("Clear candidate list");
+                        $('ul#candidates').children().remove();
+                        this.solving_mode(true);
+						$('#textio-panel-loading').hide();
+                    },
+					undoLastAssignment : function() {
+						console.log("Undoing last assignment");
+						sudoku.undoLastAssignment();
+					},
+                    getGuessStatus: function() {
+                        return this.guessStatusValue();
+                    },
+                    reset_puzzle: function() {
+                        console.log("Reload the grid that was defined. Mode still solve");
+						this.cellAssignments.removeAll();
+                        this.theory_stack.removeAll();
+                        $('#grid').children().remove();
+						console.log("cell assignments: " + JSON.stringify(this.cellAssignments()));
+                        $('ul#candidates').children().remove();
+                        $('#diagnostics .error').remove();
+                        sudoku.initialiseGrid(puzzle_setup_state);
+                        sudoku.buildGrid($('#grid'));
+                        $('.inner-clickable').click(innerCellClick);
+                        sudoku.theory_stack = [];
+                    },
+                    clear_grid: function() {
+                       // console.log("Clear grid for new puzzle. Mode changed to setup");
+                        this.solving_mode(false);
+                        this.theory_stack.removeAll();
+                        $('#grid').children().remove();
+                        this.cellAssignments([]);
+                        //console.log("cell assignments: " + JSON.stringify(this.cellAssignments()));
+                        $('ul#candidates').children().remove();
+                        $('#diagnostics .error').remove();
+                        puzzle_setup_state = [];
+                        sudoku.initialiseGrid([]);
+                        sudoku.buildGrid($('#grid'));
+                        $('.inner-clickable').click(innerCellClick);
+                        sudoku.theory_stack = [];
+                    },
+					get_puzzle_as_text: function() {
+						//alert("Puzzle as text: " + sudoku.getModelAsTextString());
+						$('#textio-panel-storing-title').text("Copy and Paste Text Into a Local File");
+						$('#textio-input').text(sudoku.getModelAsTextString());
+						$('#textio-panel-storing').show();
+					},
+					load_puzzle_as_text: function() {
+						$('#textio-panel-loading-title').text("Paste Text Into Panel and confirm");
+						this.loading_puzzle(true);
+						$('#textio-panel-loading').show();
+					},
+					load_data: function() {
+						var pd = JSON.parse( this.puzzleData() );
+						sudoku.initialiseGrid( pd );
+					},
+					close_load_panel : function() {
+						$('#textio-panel-loading').hide();
+						$('#textio-input').text('');
+					},
+                    simple_solve: function() {
+                        console.log("Resolving what I can....");
+                        simpleSolve();
+                    },
+                    inner_cell_click: function() {
+                        console.log("Clicked inner cell");
+                    },
+                    pop_theory: function() {
+                        this.theory_stack.pop();
+                    }
+                };
+                ko.applyBindings(myViewModel);
+                sudoku.dimension = 3;
+				sudoku.grid_state = [];
+                sudoku.viewModel = myViewModel;
+                sudoku.initialiseGrid();
+                sudoku.buildGrid($('#grid'));
+                $('.inner-clickable').click(innerCellClick);
+				$('#hide-textio').click( function() { $('#textio-panel-storing').hide(); } );
+            }
+        );
+    </script>
+
+    <body>
+        <div id="main">
+            <div id="lhs">
+                <div id='grid'></div>
+                <hr/>
+                <table id="input-panel">
+                    <tr>
+                        <th>Candidates</th>
+                        <td>
+                            <ul id="candidates">
+                                <!-- <li class="hidden">Candidates: </li> -->
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr data-bind="if: solving_mode">
+                        <th>Guess or sure?</th>
+                        <td>
+                            <label>
+                                <input type="radio" value="guess" data-bind="checked: guessStatusValue" />guess</label>
+                            <label>
+                                <input type="radio" value="sure" data-bind="checked: guessStatusValue" />sure</label>
+                        </td>
+                    </tr>
+                </table>
+                <div id="controls">
+                    <ul>
+                        <li>
+                            <button id="button-1" data-bind="click: setup_complete, disable: solving_mode">Setup Complete</button>
+                        </li>
+						<li>
+							<button id="button-4" data-bind="click: load_puzzle_as_text, disable: solving_mode">Load Puzzle</button>
+						</li>						                        <li>
+                            <button id="button-2" data-bind="click: reset_puzzle, enable: solving_mode">Reset Puzzle</button>
+                        </li>
+                        <li>
+                            <button id="button-3" data-bind="click: clear_grid, enable: solving_mode">Clear Grid</button>
+                        </li>
+                        <li>
+                            <button id="button-3" data-bind="click: simple_solve, enable: solving_mode">Simple Solve</button>
+                        </li>
+						<li>
+							<button id="button-4" data-bind="click: get_puzzle_as_text, enable: solving_mode">Store Puzzle</button>
+						</li>
+                    </ul>
+                </div>
+                <div id="diagnostics">
+                    <h2>
+			Number of assignments: <span data-bind="text: cellAssignments().length"></span>
+			<span data-bind="if: cellAssignments().length == Math.pow(sudoku.dimension,4)">COMPLETE!!</span>
+					</h2>
+                </div>
+			<div data-bind="ifnot: solving_mode">
+			<ul data-bind="foreach: cellAssignments">
+				<li>
+					<span data-bind="text: '(' + $data.outer + ',' + $data.inner + ') : ' + $data.cellValue"></span>
+					<span data-bind="if: $index() === $parent.cellAssignments().length - 1"><a href="#" data-bind="click: $parent.undoLastAssignment">Undo</a></span>
+				</li>
+			</ul>
+			</div>
+				
+					<div id="textio-panel-storing">
+						<h3 id="textio-panel-storing-title"></h3>
+						<textarea id="textio-input" rows="5" columns="50"></textarea>
+						<button id="hide-textio">Close</button>
+					</div>
+					<div id="textio-panel-loading">
+						<h3 id="textio-panel-loading-title"></h3>
+						<textarea id="textio-input" rows="5" columns="50" data-bind="value: puzzleData"></textarea>
+						<button id="load-puzzle" data-bind="click: load_data">Load</button>
+						<button id="hide-textio" data-bind="click: close_load_panel">Close</button>
+					</div>					
+            </div>
+            <div id="rhs">
+                <div id="theory-panel" data-bind="if: theory_stack().length > 0">
+                    <h2 id="theory-header">Theory</h2>
+                    <ul id="theory"></ul>
+                </div>
+            </div>
+        </div>
+    </body>
+
+</html>
